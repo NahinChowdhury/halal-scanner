@@ -1,0 +1,10 @@
+barcode api
+https://world.openfoodfacts.org/api/v2/product/024463063167.json
+
+check for product.ecoscore_data.missing key. if indegredients in list of keys, then no ingredients provided
+
+you can find ingredients in product.ingredients_text_en if exist. or just ingredients_text only
+
+
+FEATURES to implement:
+Should allow choosing front and back camera
