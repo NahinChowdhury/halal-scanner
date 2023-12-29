@@ -141,7 +141,7 @@ export const GoogleOCR:FunctionComponent = () => {
 
 	const extractIngredients = (text: string) => {
 		// Use regular expression to find the English ingredients
-		const regex = /Ingredients:(.*?)(Ingrédients|Ingredients):/si;
+		const regex = /Ingredients\s?:(.*?)(Ingrédients|Ingredients)\s?:/si;
 		const match = text.match(regex);
 
 		if (match && match[1]) {

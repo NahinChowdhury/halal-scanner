@@ -9,8 +9,9 @@ export const BarCode:FunctionComponent = () => {
 	const [latestImage, setLatestImage] = useState<string>('');
 	const videoRef = useRef<HTMLVideoElement>(null);
 	const imageRef = useRef<HTMLImageElement>(null);
-	const [selectedDeviceId, setSelectedDeviceId] = React.useState<string | null>(null);
-	const [videoDevices, setVideoDevices] = React.useState<MediaDeviceInfo[] | null>(null);
+	const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+	const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[] | null>(null);
+	const [ingredients, setIngredient] = useState<any>({})
 
 	const handleDeviceChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
 	  setSelectedDeviceId(event.target.value);
@@ -102,6 +103,40 @@ export const BarCode:FunctionComponent = () => {
 		return () => clearInterval(intervalId);
 	}, []);
 
+	useEffect(() => {
+		if (barcode) {
+			axios.get(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`)
+				.then(response => {
+					console.log(response);
+					const data = response.data
+					if(data.status === 0) {
+						alert("Product not found");
+						return;
+					} else{
+						if (data?.product?.ecoscore_data?.missing) {
+							const missingKeys = data.product.ecoscore_data.missing;
+							console.log(missingKeys)
+							console.log(typeof missingKeys)
+							
+							if ('ingredients' in missingKeys) {
+							  console.log('No ingredients provided');
+							} else {
+								let ingredients = '';
+								
+								if (data.product.ingredients_text_en) {
+									ingredients = data.product.ingredients_text_en;
+								} else if (data.product.ingredients_text) {
+									ingredients = data.product.ingredients_text;
+								}
+								
+								setIngredient(ingredients);
+							}
+						  }
+					} 
+				});
+		}
+	}, [barcode]);
+
 	return (
 		<div>
 			<select onChange={handleDeviceChange}>
@@ -114,6 +149,7 @@ export const BarCode:FunctionComponent = () => {
 			<video ref={videoRef} />
 			{barcode && <p>Barcode detected: {barcode}</p>}
 			<img ref={imageRef} src={latestImage} alt="Latest image" />
+			{ingredients && <p>Ingredients: {JSON.stringify(ingredients)}</p>}
 		</div>
 	);
 }
