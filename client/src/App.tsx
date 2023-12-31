@@ -1,6 +1,6 @@
 import { Route, Routes as Switch, BrowserRouter as Router } from "react-router-dom";
 import { PrivateRoute } from './components/PrivateRoute';
-import { Header, Footer } from './components/Index';
+import { Navbar, Footer } from './components/Index';
 import { Login } from './main/Login';
 import { Signup } from './main/Signup';
 import { Profile } from "./main/Profile";
@@ -14,7 +14,7 @@ function App() {
     <>
 		
 		<Router>
-		{/* <Header /> */}
+		<Navbar />
 		
 			<Switch>
 				{/* <Route path="/profile" element={ <PrivateRoute />  }>
