@@ -1,6 +1,9 @@
 import axios from "axios";
 import React, {FunctionComponent, useEffect, useState} from "react";
 import config from "../config";
+import { useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { ArrowUpTrayIcon, XMarkIcon } from '@heroicons/react/24/solid'
 
 
 export const GoogleOCR:FunctionComponent = () => {
@@ -9,8 +12,55 @@ export const GoogleOCR:FunctionComponent = () => {
 	const [selectedImage, setSelectedImage] = useState<File | null>(null);
 	const [base64Image, setBase64Image] = useState<string | null>('');
 	const [grayscaleBase64Image, setGrayscaleBase64Image] = useState<string | null>('');
+	const [fetchingText, setFetchingText] = useState<boolean>(false);
 
 	const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+	const textAreaRef = React.useRef<HTMLDivElement | null>(null);
+	const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+	const onDrop = useCallback((acceptedFiles: any) => {
+		// Handle dropped files
+		if (acceptedFiles.length > 0) {
+			const file = acceptedFiles[0];
+
+			URL.revokeObjectURL(file.preview)
+			
+			setSelectedImage(file);
+
+			// Convert the selected image to Base64
+			if (file) {
+				convertImageToBase64(file, (base64String: string | null) => {
+					setBase64Image(base64String);
+				});
+			}
+
+		}
+
+	}, []);
+
+	const { getRootProps, getInputProps, isDragActive } = useDropzone({
+		accept: {
+		  'image/*': []
+		},
+		// maxSize: 1024 * 1000,
+		onDrop
+	})
+
+	useEffect(() => {
+		if (!textAreaRef.current) return;
+	
+		const handlePasteFile = async (event: ClipboardEvent) => {
+		  if (event.clipboardData?.files) {
+			(inputRef.current as unknown as HTMLInputElement).files =
+			  event.clipboardData.files;
+			inputRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
+		  }
+		};
+		textAreaRef.current.addEventListener("paste", handlePasteFile);
+		return () =>
+		  textAreaRef.current?.removeEventListener("paste", handlePasteFile);
+	}, [textAreaRef]);
+
 
 	useEffect(() => {
 		grayscaleImage();
@@ -106,6 +156,7 @@ export const GoogleOCR:FunctionComponent = () => {
 			return;
 		}
 
+		setFetchingText(true);
 		const apiKey = config.API_KEY
 		try {
 			const requestData = {
@@ -128,11 +179,13 @@ export const GoogleOCR:FunctionComponent = () => {
 				`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
 				requestData
 			);
-
+			
+			setFetchingText(false);
 			const text = response.data.responses[0]?.textAnnotations[0]?.description || 'No text found';
 			setExtractedText(text);
 			extractIngredients(text);
 		} catch (error: any) {
+			setFetchingText(false);
 			console.error('Error extracting text:', error);
 			console.error('Error response data:', error.response.data);
 			console.error('Error response text:', error.response.statusText);
@@ -161,35 +214,58 @@ export const GoogleOCR:FunctionComponent = () => {
 
 	return (
 		<div>
-		<h1>Google OCR App</h1>
-		<input type="file" accept="image/*" onChange={handleFileChange} />
-		<button onClick={handleExtractText}>Extract Text</button>
+			<h1>Google OCR App</h1>
+			<div ref={textAreaRef}>
+				<div
+					{...getRootProps({ style: { padding: '16rem', marginTop: '10rem', border: '1px solid black', width: '30%', marginLeft: 'auto', marginRight: 'auto' }})}
+				>
+					<input {...getInputProps()} ref={inputRef}/>
+					<div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4rem'}}>
+						<ArrowUpTrayIcon style={{width: '5rem', height: '5rem'}} />
+						{isDragActive ? (
+							<p>Drop the files here ...</p>
+						) : (
+							<p>Drag & drop files here, or click to select files</p>
+						)}
+					</div>
+				</div>
+			</div>
 
-		{selectedImage && (
-			<div>
-				<h2>Selected Image:</h2>
-				<img src={URL.createObjectURL(selectedImage)} alt="Selected" width="300" />
+			{/* <input type="file" accept="image/*" onChange={handleFileChange} /> */}
+			<div style={{display: 'flex', justifyContent: 'center', margin: '2rem 0'}}>
+				<button onClick={handleExtractText}>Confirm</button>
 			</div>
-		)}
-		{grayscaleBase64Image && (
-			<h2>Grayscale Image:</h2>
-		)}
-		<canvas ref={canvasRef} />
-		
-		
-		{extractedText && (
-			<div>
-				<h2>Extracted Text:</h2>
-				<p>{extractedText}</p>
-			</div>
-		)}
-		
-		{cleanedText && (
-			<div>
-				<h2>Cleaned Text:</h2>
-				<p>{cleanedText}</p>
-			</div>
-		)}
+
+			{selectedImage && (
+				<div>
+					<h2>Selected Image:</h2>
+					<img src={URL.createObjectURL(selectedImage)} alt="Selected" width="300" />
+				</div>
+			)}
+			{/* {grayscaleBase64Image && (
+				<h2>Grayscale Image:</h2>
+			)}
+			<canvas ref={canvasRef} /> */}
+			
+			{fetchingText && (
+				<div>
+					<p>Fetching text...</p>
+				</div>
+			)}
+
+			{extractedText && (
+				<div>
+					<h2>Extracted Text:</h2>
+					<p>{extractedText}</p>
+				</div>
+			)}
+			
+			{cleanedText && (
+				<div>
+					<h2>Cleaned Text:</h2>
+					<p>{cleanedText}</p>
+				</div>
+			)}
 		</div>
 	);
 }
